@@ -17,7 +17,11 @@ In tested setups, Spectrum can improve generation speed by **around 35%**.
 
 The node appears in ComfyUI as:  **Anima Layer Replay Patcher**
 
-## Installation
+## Automatic Installation
+
+Within ComfyUI's Extension Manager, search for **ComfyUI-Anima-Enhancer** and install it directly.
+
+## Manual Installation
 
 Open a terminal inside your ComfyUI `custom_nodes` folder and run:
 
@@ -34,6 +38,7 @@ ComfyUI/
 └── custom_nodes/
   └── ComfyUI-Anima-Enhancer/
 ```
+
 
 ## Usage
 
