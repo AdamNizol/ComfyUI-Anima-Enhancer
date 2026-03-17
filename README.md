@@ -75,6 +75,8 @@ When Spectrum is enabled, these settings become active:
 * **spectrum_m**
 * **spectrum_lam**
 * **spectrum_warmup_steps**
+* **spectrum_window_size**
+* **spectrum_flex_window**
 
 ## Recommended starting settings
 
@@ -91,4 +93,6 @@ If using Spectrum, a good starting point is:
 * **spectrum_m:** `8-16`
 * **spectrum_lam:** `0.5`
 * **spectrum_warmup_steps:** `6`
-
+* **spectrum_window_size:** `2`
+* **spectrum_flex_window:** `0`
+ 

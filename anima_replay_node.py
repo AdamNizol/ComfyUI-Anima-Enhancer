@@ -284,13 +284,9 @@ class AnimaLayerReplayPatcher:
       - integrated into the same UNet wrapper so it can coexist with replay
       - exposes w, m, lam, warmup_steps
       - fixed internally:
-          window_size = 2
-          flex_window = 0
           stop_caching_step = -1
     """
 
-    SPECTRUM_WINDOW_SIZE = 2
-    SPECTRUM_FLEX_WINDOW = 0.0
     SPECTRUM_STOP_CACHING_STEP = -1
 
     @classmethod
@@ -298,6 +294,7 @@ class AnimaLayerReplayPatcher:
         return {
             "required": {
                 "model": ("MODEL",),
+                "enable_replay": ("BOOLEAN", {"default": True}),
                 "block_indices": (
                     "STRING",
                     {
@@ -312,6 +309,8 @@ class AnimaLayerReplayPatcher:
                 "spectrum_m": ("INT", {"default": 16, "min": 1, "max": 32, "step": 1}),
                 "spectrum_lam": ("FLOAT", {"default": 0.50, "min": 0.0, "max": 100.0, "step": 0.01}),
                 "spectrum_warmup_steps": ("INT", {"default": 6, "min": 0, "max": 50, "step": 1}),
+                "spectrum_window_size": ("INT", {"default": 2, "min": 1, "step": 1}),
+                "spectrum_flex_window": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
             }
         }
 
@@ -323,6 +322,7 @@ class AnimaLayerReplayPatcher:
         self,
         model,
         block_indices: str,
+        enable_replay: bool,
         denoise_start_pct: float,
         denoise_end_pct: float,
         enable_spectrum: bool,
@@ -330,6 +330,8 @@ class AnimaLayerReplayPatcher:
         spectrum_m: int,
         spectrum_lam: float,
         spectrum_warmup_steps: int,
+        spectrum_window_size: int,
+        spectrum_flex_window: float
     ):
         patched_model = model.clone()
         diffusion_model = patched_model.get_model_object("diffusion_model")
@@ -364,7 +366,7 @@ class AnimaLayerReplayPatcher:
             "forecaster": None,
             "cnt": 0,
             "num_cached": 0,
-            "curr_ws": float(self.SPECTRUM_WINDOW_SIZE),
+            "curr_ws": float(spectrum_window_size),
             "last_t": float("inf"),
             "estimated_total_steps": 50,
         }
@@ -425,7 +427,7 @@ class AnimaLayerReplayPatcher:
             spectrum_state["forecaster"] = None
             spectrum_state["cnt"] = 0
             spectrum_state["num_cached"] = 0
-            spectrum_state["curr_ws"] = float(self.SPECTRUM_WINDOW_SIZE)
+            spectrum_state["curr_ws"] = float(spectrum_window_size)
             spectrum_state["last_t"] = float("inf")
             spectrum_state["estimated_total_steps"] = 50
 
@@ -433,8 +435,10 @@ class AnimaLayerReplayPatcher:
             timestep = kwargs["timestep"]
             c = kwargs.get("c", {})
 
-            progress = _progress_from_schedule(timestep, c)
-            replay_active = True if progress is None else (denoise_start <= progress <= denoise_end)
+            replay_active = False
+            if enable_replay:
+                progress = _progress_from_schedule(timestep, c)
+                replay_active = True if progress is None else (denoise_start <= progress <= denoise_end)
 
             if not enable_spectrum:
                 return run_with_optional_replay(model_function, kwargs, replay_active)
@@ -487,7 +491,7 @@ class AnimaLayerReplayPatcher:
                 spectrum_state["forecaster"].update(spectrum_state["cnt"], out)
 
                 if spectrum_state["cnt"] >= spectrum_warmup_steps:
-                    spectrum_state["curr_ws"] += self.SPECTRUM_FLEX_WINDOW
+                    spectrum_state["curr_ws"] += spectrum_flex_window
 
                 spectrum_state["num_cached"] = 0
             else:
